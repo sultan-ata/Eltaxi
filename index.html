@@ -99,67 +99,89 @@
 
         <button onclick="addDriver()">ҚЎШИШ</button>
 
-        <table>
+        <table id="driver-table">
             <thead>
                 <tr>
                     <th>ИСМ ШАРИФИ</th>
                     <th>БОРТ РАҚАМИ</th>
-                    <th>ВАҚТИ</th>
+                    <th>ВАҚТИ (СОАТ)</th>
                     <th>СТАТУС</th>
                 </tr>
             </thead>
-            <tbody id="driver-table">
-                <!-- Dynamic rows will be added here -->
+            <tbody>
             </tbody>
         </table>
     </div>
 
     <script>
-        function addDriver() {
-            const driverName = document.getElementById('driver-name').value;
-            const plateNumber = document.getElementById('plate-number').value;
-            const busyHours = document.getElementById('busy-hours').value;
-
-            if (!driverName || !plateNumber || !busyHours) {
-                alert('Илтимос, барча маълумотларни тўлдиринг!');
-                return;
+        // LocalStorage-dan ma'lumotlarni yuklash
+        function loadDrivers() {
+            const savedDrivers = localStorage.getItem('drivers');
+            if (savedDrivers) {
+                const drivers = JSON.parse(savedDrivers);
+                drivers.forEach(driver => addDriverToTable(driver.name, driver.plate, driver.hours));
             }
+        }
 
-            const table = document.getElementById('driver-table');
+        // Haydovchini jadvalga va LocalStorage-ga qo'shish
+        function addDriver() {
+            const name = document.getElementById('driver-name').value;
+            const plate = document.getElementById('plate-number').value;
+            const hours = document.getElementById('busy-hours').value;
+
+            if (name && plate && hours) {
+                addDriverToTable(name, plate, hours);
+                saveDriver(name, plate, hours);
+            }
+        }
+
+        // Jadvalga haydovchini qo'shish
+        function addDriverToTable(name, plate, hours) {
+            const table = document.getElementById('driver-table').querySelector('tbody');
             const row = table.insertRow();
-            const timeCell = row.insertCell(0);
-            const plateCell = row.insertCell(1);
-            const countdownCell = row.insertCell(2);
-            const statusCell = row.insertCell(3);
 
-            timeCell.textContent = driverName;
-            plateCell.textContent = plateNumber;
-            const totalMinutes = busyHours * 60; // Convert hours to minutes
-            countdownCell.textContent = `${busyHours}:00`;
-            statusCell.innerHTML = `<span class="status busy">БАНД</span>`;
+            row.innerHTML = `
+                <td>${name}</td>
+                <td>${plate}</td>
+                <td>${hours} соат</td>
+                <td class="status busy">Busy</td>
+            `;
 
-            let remainingTime = totalMinutes * 60; // Convert minutes to seconds
+            startCountdown(row, hours);
+        }
 
-            const countdown = setInterval(() => {
-                const hours = Math.floor(remainingTime / 3600);
-                const minutes = Math.floor((remainingTime % 3600) / 60);
-                const seconds = remainingTime % 60;
+        // Orqaga sanashni boshlash
+        function startCountdown(row, hours) {
+            const statusCell = row.querySelector('.status');
+            let remainingTime = hours * 60 * 60; // Soatni sekundga aylantirish
 
-                countdownCell.textContent = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            const interval = setInterval(() => {
+                remainingTime--;
+
+                const hoursLeft = Math.floor(remainingTime / 3600);
+                const minutesLeft = Math.floor((remainingTime % 3600) / 60);
+                const secondsLeft = remainingTime % 60;
+
+                statusCell.textContent = `Busy (${hoursLeft}h ${minutesLeft}m ${secondsLeft}s)`;
 
                 if (remainingTime <= 0) {
-                    clearInterval(countdown);
-                    countdownCell.textContent = "00:00:00";
-                    statusCell.innerHTML = `<span class="status available">БОШ</span>`;
+                    clearInterval(interval);
+                    statusCell.textContent = 'Available';
+                    statusCell.classList.remove('busy');
+                    statusCell.classList.add('available');
                 }
-
-                remainingTime--;
             }, 1000);
-
-            document.getElementById('driver-name').value = '';
-            document.getElementById('plate-number').value = '';
-            document.getElementById('busy-hours').value = '';
         }
+
+        // LocalStorage-ga ma'lumotni saqlash
+        function saveDriver(name, plate, hours) {
+            const drivers = JSON.parse(localStorage.getItem('drivers')) || [];
+            drivers.push({ name, plate, hours });
+            localStorage.setItem('drivers', JSON.stringify(drivers));
+        }
+
+        // Sahifa yuklanganda ma'lumotlarni yuklash
+        window.onload = loadDrivers;
     </script>
 </body>
 </html>
