@@ -133,6 +133,7 @@
             });
         };
 
+        // Orqaga sanashni boshlash
         function startCountdown(index) {
             const interval = setInterval(() => {
                 const now = new Date().getTime();
@@ -154,56 +155,58 @@
             }, 1000);
         }
 
+        // Yozuvni jadvalga qo'shish
         function addDriver() {
-            const name = document.getElementById("driver-name").value;
-            const plate = document.getElementById("plate-number").value;
-            const busyHours = parseInt(document.getElementById("busy-hours").value) * 60 * 60 * 1000; // Convert hours to milliseconds
-            const endTime = new Date().getTime() + busyHours;
+            const name = document.getElementById('driver-name').value.trim();
+            const plateNumber = document.getElementById('plate-number').value.trim();
+            const busyHours = document.getElementById('busy-hours').value.trim();
+
+            if (!name || !plateNumber || !busyHours) {
+                alert('Iltimos, barcha maydonlarni to\'ldiring!');
+                return;
+            }
+
+            const endTime = new Date().getTime() + parseInt(busyHours) * 3600000; // Soatni millisekundga o'zgartirish
 
             const driver = {
-                name,
-                plate,
+                name: name,
+                plateNumber: plateNumber,
+                busyHours: busyHours,
                 status: "БАНД",
-                remainingTime: `${busyHours / (1000 * 60 * 60)} соат`,
-                endTime: endTime
+                endTime: endTime,
+                remainingTime: `${busyHours} соат 0 минут 0 секунд`
             };
 
             drivers.push(driver);
-            saveToLocalStorage();
+            localStorage.setItem("drivers", JSON.stringify(drivers));
             addDriverToTable(driver);
             startCountdown(drivers.length - 1);
         }
 
+        // Jadvalga yozuvni qo'shish
         function addDriverToTable(driver) {
-            const row = document.createElement("tr");
+            const table = document.getElementById('driver-table').getElementsByTagName('tbody')[0];
+            const row = table.insertRow();
             row.innerHTML = `
-                <td class="name">${driver.name}</td>
-                <td class="plate">${driver.plate}</td>
-                <td class="status">${driver.status}</td>
-                <td class="remaining-time">${driver.remainingTime}</td>
+                <td>${driver.name}</td>
+                <td>${driver.plateNumber}</td>
+                <td class="status ${driver.status === "Мавжуд" ? 'available' : 'busy'}">${driver.status}</td>
+                <td>${driver.remainingTime}</td>
             `;
-            tableBody.appendChild(row);
         }
 
-        function saveToLocalStorage() {
-            localStorage.setItem("drivers", JSON.stringify(drivers));
-        }
-
+        // Jadvalni yangilash
         function updateTable() {
-            const rows = document.querySelectorAll("#driver-table tbody tr");
-            rows.forEach((row, index) => {
-                const driver = drivers[index];
-                row.querySelector(".status").innerText = driver.status;
-                row.querySelector(".remaining-time").innerText = driver.remainingTime;
-            });
+            const table = document.getElementById('driver-table').getElementsByTagName('tbody')[0];
+            table.innerHTML = '';
+            drivers.forEach(driver => addDriverToTable(driver));
         }
 
+        // SBROS QILISH (Barchasini o'chirish)
         function resetAll() {
-            if (confirm("Barcha yozuvlarni o'chirmoqchimisiz?")) {
-                localStorage.removeItem("drivers");
-                drivers = [];
-                tableBody.innerHTML = ''; // tableni tozalash
-            }
+            localStorage.removeItem("drivers");
+            drivers = [];
+            updateTable();
         }
     </script>
 </body>
