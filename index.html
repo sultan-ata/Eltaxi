@@ -6,10 +6,9 @@
     <title>Taxi Management System</title>
     <style>
         body {
-            background-color: rgba(0, 0, 0, 0.1);
+            background-color: #f4f4f9;
             font-family: Arial, sans-serif;
             margin: 20px;
-            background-color: #f4f4f9;
         }
         .container {
             max-width: 800px;
@@ -34,19 +33,6 @@
         th {
             background-color: #f4f4f9;
         }
-        .status-button {
-            padding: 10px 15px;
-            border: none;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        .available {
-            background-color: #007bff;
-        }
-        .busy {
-            background-color: #dc3545;
-        }
         .form-group {
             margin-bottom: 15px;
         }
@@ -54,7 +40,7 @@
             display: block;
             margin-bottom: 5px;
         }
-        input, select {
+        input {
             width: 100%;
             padding: 10px;
             border: 1px solid #ccc;
@@ -71,101 +57,109 @@
         button:hover {
             background-color: #218838;
         }
+        h1 {
+            text-align: center;
+        }
+        h3 {
+            text-align: center;
+        }
+        .status {
+            padding: 5px 10px;
+            border-radius: 5px;
+            color: white;
+        }
+        .available {
+            background-color: #28a745;
+        }
+        .busy {
+            background-color: #dc3545;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>ЭлТакси сабаблилар дафтари:</h1>
+        <h1>ЭлТакси</h1>
+        <hr>
+        <h3>Сабаблилар дафтари</h3>
 
         <div class="form-group">
-            <label for="ШАФЁРЛАР">ИСМ ШАРИФИ:</label>
+            <label for="driver-name">ИСМ ШАРИФИ:</label>
             <input type="text" id="driver-name" placeholder="ИСМ ФАМИЛИЯСИ">
         </div>
 
         <div class="form-group">
-            <label for="БОРТ">БОРТ РАҚАМИ:</label>
+            <label for="plate-number">БОРТ РАҚАМИ:</label>
             <input type="text" id="plate-number" placeholder="БОРТ НОМЕР">
         </div>
 
         <div class="form-group">
-            <label for="ВАҚТИ">ВАҚТИ:</label>
+            <label for="busy-hours">ВАҚТИ (СОАТ):</label>
             <input type="number" id="busy-hours" placeholder="САБАБЛИ ВАҚТИ">
         </div>
 
-        <button onclick="addDriver()">Юкла</button>
+        <button onclick="addDriver()">ҚЎШИШ</button>
 
         <table>
             <thead>
                 <tr>
-                    <th>ШАФЁРЛАР</th>
-                    <th>БОРТ</th>
+                    <th>ИСМ ШАРИФИ</th>
+                    <th>БОРТ РАҚАМИ</th>
                     <th>ВАҚТИ</th>
                     <th>СТАТУС</th>
                 </tr>
             </thead>
             <tbody id="driver-table">
+                <!-- Dynamic rows will be added here -->
             </tbody>
         </table>
     </div>
 
     <script>
-        const drivers = JSON.parse(localStorage.getItem('drivers')) || [];
-        const table = document.getElementById('driver-table');
-
-        function saveDriversToStorage() {
-            localStorage.setItem('drivers', JSON.stringify(drivers));
-        }
-
-        function renderTable() {
-            table.innerHTML = '';
-            drivers.forEach((driver, index) => {
-                const now = new Date();
-                const busyUntil = new Date(driver.timestamp);
-                busyUntil.setHours(busyUntil.getHours() + parseInt(driver.busyHours));
-
-                const isExpired = now > busyUntil;
-
-                const row = `<tr>
-                    <td>${driver.name}</td>
-                    <td>${driver.plateNumber}</td>
-                    <td>${driver.busyHours}</td>
-                    <td>
-                        <button class="status-button ${isExpired ? 'available' : 'busy'}">
-                            ${isExpired ? 'ИШДА' : 'БАНД'}
-                        </button>
-                    </td>
-                </tr>`;
-                table.innerHTML += row;
-            });
-        }
-
         function addDriver() {
-            const name = document.getElementById('driver-name').value.trim();
-            const plateNumber = document.getElementById('plate-number').value.trim();
-            const busyHours = document.getElementById('busy-hours').value.trim();
+            const driverName = document.getElementById('driver-name').value;
+            const plateNumber = document.getElementById('plate-number').value;
+            const busyHours = document.getElementById('busy-hours').value;
 
-            if (!name || !plateNumber || !busyHours) {
-                alert('Please fill in all fields.');
+            if (!driverName || !plateNumber || !busyHours) {
+                alert('Илтимос, барча маълумотларни тўлдиринг!');
                 return;
             }
 
-            if (drivers.find(driver => driver.name === name)) {
-                alert('This driver is already registered.');
-                return;
-            }
+            const table = document.getElementById('driver-table');
+            const row = table.insertRow();
+            const timeCell = row.insertCell(0);
+            const plateCell = row.insertCell(1);
+            const countdownCell = row.insertCell(2);
+            const statusCell = row.insertCell(3);
 
-            const timestamp = new Date().toISOString();
+            timeCell.textContent = driverName;
+            plateCell.textContent = plateNumber;
+            const totalMinutes = busyHours * 60; // Convert hours to minutes
+            countdownCell.textContent = `${busyHours}:00`;
+            statusCell.innerHTML = `<span class="status busy">БАНД</span>`;
 
-            drivers.push({ name, plateNumber, busyHours, timestamp });
-            saveDriversToStorage();
-            renderTable();
+            let remainingTime = totalMinutes * 60; // Convert minutes to seconds
+
+            const countdown = setInterval(() => {
+                const hours = Math.floor(remainingTime / 3600);
+                const minutes = Math.floor((remainingTime % 3600) / 60);
+                const seconds = remainingTime % 60;
+
+                countdownCell.textContent = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+                if (remainingTime <= 0) {
+                    clearInterval(countdown);
+                    countdownCell.textContent = "00:00:00";
+                    statusCell.innerHTML = `<span class="status available">БОШ</span>`;
+                }
+
+                remainingTime--;
+            }, 1000);
 
             document.getElementById('driver-name').value = '';
             document.getElementById('plate-number').value = '';
             document.getElementById('busy-hours').value = '';
         }
-
-        window.onload = renderTable;
     </script>
 </body>
 </html>
