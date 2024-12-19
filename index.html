@@ -94,115 +94,109 @@
 
         <div class="form-group">
             <label for="busy-hours">ВАҚТИ (СОАТ):</label>
-            <input type="number" id="busy-hours" placeholder="САБАБЛИ ВАҚТИ">
+            <input type="number" id="busy-hours" placeholder="ВАҚТ СОАТДА">
         </div>
 
-        <button onclick="addDriver()">ҚЎШИШ</button>
+        <button onclick="addDriver()">Қўшиш</button>
 
         <table id="driver-table">
             <thead>
                 <tr>
                     <th>ИСМ ШАРИФИ</th>
                     <th>БОРТ РАҚАМИ</th>
+                    <th>ВАҚТ ҚОЛДИ</th>
                     <th>ҲОЛАТ</th>
-                    <th>ҚОЛГАН ВАҚТ</th>
                 </tr>
             </thead>
-            <tbody>
-            </tbody>
+            <tbody></tbody>
         </table>
     </div>
 
     <script>
         const tableBody = document.querySelector("#driver-table tbody");
 
-        function loadDrivers() {
-            const savedDrivers = JSON.parse(localStorage.getItem("drivers")) || [];
-            savedDrivers.forEach(driver => addDriverToTable(driver));
-        }
+        // Load data from LocalStorage on page load
+        window.onload = function () {
+            const savedData = JSON.parse(localStorage.getItem("drivers")) || [];
+            savedData.forEach((driver) => addDriverToTable(driver));
+        };
 
-        function saveDrivers() {
-            const drivers = [];
-            tableBody.querySelectorAll("tr").forEach(row => {
-                const cells = row.querySelectorAll("td");
-                drivers.push({
-                    name: cells[0].textContent,
-                    plate: cells[1].textContent,
-                    status: cells[2].textContent,
-                    remainingTime: cells[3].textContent
-                });
+        function saveToLocalStorage() {
+            const rows = Array.from(tableBody.children);
+            const data = rows.map((row) => {
+                return {
+                    name: row.querySelector(".name").innerText,
+                    plate: row.querySelector(".plate").innerText,
+                    timeLeft: parseInt(row.dataset.timeLeft),
+                    status: row.querySelector(".status").innerText,
+                };
             });
-            localStorage.setItem("drivers", JSON.stringify(drivers));
-        }
-
-        function addDriverToTable({ name, plate, remainingTime }) {
-            const row = document.createElement("tr");
-
-            const nameCell = document.createElement("td");
-            nameCell.textContent = name;
-
-            const plateCell = document.createElement("td");
-            plateCell.textContent = plate;
-
-            const statusCell = document.createElement("td");
-            statusCell.className = "status busy";
-            statusCell.textContent = "Банд";
-
-            const timeCell = document.createElement("td");
-            timeCell.textContent = remainingTime;
-
-            row.appendChild(nameCell);
-            row.appendChild(plateCell);
-            row.appendChild(statusCell);
-            row.appendChild(timeCell);
-            tableBody.appendChild(row);
-
-            startCountdown(row, parseInt(remainingTime) * 3600);
+            localStorage.setItem("drivers", JSON.stringify(data));
         }
 
         function addDriver() {
             const name = document.getElementById("driver-name").value;
             const plate = document.getElementById("plate-number").value;
-            const busyHours = parseInt(document.getElementById("busy-hours").value) || 0;
+            const busyHours = parseInt(document.getElementById("busy-hours").value) * 60 * 60; // Convert hours to seconds
 
-            if (!name || !plate || busyHours <= 0) {
-                alert("Барча майдонларни тўлдиринг!");
-                return;
-            }
-
-            addDriverToTable({ name, plate, remainingTime: busyHours });
-            saveDrivers();
-
-            document.getElementById("driver-name").value = "";
-            document.getElementById("plate-number").value = "";
-            document.getElementById("busy-hours").value = "";
+            const driver = {
+                name,
+                plate,
+                timeLeft: busyHours,
+                status: "Busy",
+            };
+            addDriverToTable(driver);
+            saveToLocalStorage();
         }
 
-        function startCountdown(row, totalTime) {
-            const timeCell = row.querySelector("td:nth-child(4)");
-            const statusCell = row.querySelector("td:nth-child(3)");
-            let remainingTime = totalTime;
+        function addDriverToTable(driver) {
+            const row = document.createElement("tr");
+            row.dataset.timeLeft = driver.timeLeft;
+
+            row.innerHTML = `
+                <td class="name">${driver.name}</td>
+                <td class="plate">${driver.plate}</td>
+                <td class="time">${formatTime(driver.timeLeft)}</td>
+                <td class="status ${driver.status === "Busy" ? "busy" : "available"}">${driver.status}</td>
+            `;
+
+            if (driver.status === "Busy") {
+                startCountdown(row);
+            }
+
+            tableBody.appendChild(row);
+        }
+
+        function startCountdown(row) {
+            const timeCell = row.querySelector(".time");
+            const statusCell = row.querySelector(".status");
 
             const interval = setInterval(() => {
-                remainingTime--;
+                let timeLeft = parseInt(row.dataset.timeLeft);
 
-                const hours = Math.floor(remainingTime / 3600);
-                const minutes = Math.floor((remainingTime % 3600) / 60);
-                const seconds = remainingTime % 60;
-
-                timeCell.textContent = `${hours} соат ${minutes} дақиқа ${seconds} секунд`;
-
-                if (remainingTime <= 0) {
+                if (timeLeft <= 0) {
                     clearInterval(interval);
-                    statusCell.textContent = "Available";
-                    statusCell.className = "status available";
-                    timeCell.textContent = "0";
-                    saveDrivers();
+                    statusCell.innerText = "Available";
+                    statusCell.classList.remove("busy");
+                    statusCell.classList.add("available");
+                    timeCell.innerText = "-";
+                } else {
+                    timeLeft--;
+                    row.dataset.timeLeft = timeLeft;
+                    timeCell.innerText = formatTime(timeLeft);
                 }
+
+                saveToLocalStorage(); // Save changes to LocalStorage
             }, 1000);
         }
 
-        window.onload = loadDrivers;
+        function formatTime(seconds) {
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+
+            return `${hrs} соат ${mins} минут ${secs} секунд`;
+        }
     </script>
 </body>
 </html>
