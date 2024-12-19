@@ -31,7 +31,7 @@
             text-align: center;
         }
         th {
-            background-color: #ffb700e3;
+            background-color: #f4f4f9;
         }
         .form-group {
             margin-bottom: 15px;
@@ -81,12 +81,19 @@
         .reset-button:hover {
             background-color: #c82333;
         }
+        /* Logotip uchun o'zgartirish */
+        .logo {
+            display: block;
+            margin: 0 auto;
+            width: 150px;  /* Logotip o'lchamini moslashtiring */
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>ЭлТакси</h1>
-        <hr>
+        <!-- Logotipni joylashtirish -->
+        <img src="/eltaxi/sababli.html/eltaksi.png" alt="ЭлТакси Logotipi" class="logo">
+
         <h3>Сабаблилар дафтари</h3>
 
         <div class="form-group">
@@ -133,7 +140,44 @@
             });
         };
 
-        // Orqaga sanashni boshlash
+        function addDriver() {
+            const driverName = document.getElementById("driver-name").value;
+            const plateNumber = document.getElementById("plate-number").value;
+            const busyHours = document.getElementById("busy-hours").value;
+
+            if (driverName && plateNumber && busyHours) {
+                const driver = {
+                    name: driverName,
+                    plateNumber: plateNumber,
+                    busyHours: busyHours,
+                    endTime: new Date().getTime() + (parseInt(busyHours) * 60 * 60 * 1000),
+                    status: "БАНД",
+                    remainingTime: `${busyHours} соат 0 минут 0 секунд`
+                };
+                
+                drivers.push(driver);
+                localStorage.setItem("drivers", JSON.stringify(drivers));
+
+                addDriverToTable(driver);
+                startCountdown(drivers.length - 1);
+            } else {
+                alert("Илтимос, барча майдонларни тўлдиринг.");
+            }
+        }
+
+        function addDriverToTable(driver) {
+            const table = document.querySelector("#driver-table tbody");
+            const row = document.createElement("tr");
+
+            row.innerHTML = `
+                <td>${driver.name}</td>
+                <td>${driver.plateNumber}</td>
+                <td class="status ${driver.status === 'БАНД' ? 'busy' : 'available'}">${driver.status}</td>
+                <td>${driver.remainingTime}</td>
+            `;
+            table.appendChild(row);
+        }
+
         function startCountdown(index) {
             const interval = setInterval(() => {
                 const now = new Date().getTime();
@@ -146,63 +190,24 @@
                     driver.remainingTime = "0 соат 0 минут 0 секунд";
                     updateTable();
                 } else {
-                    const hours = Math.floor((remainingTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                    const minutes = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
-                    const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
+                    const hours = Math.floor((remainingTime / (1000 * 60 * 60)) % 24);
+                    const minutes = Math.floor((remainingTime / (1000 * 60)) % 60);
+                    const seconds = Math.floor((remainingTime / 1000) % 60);
                     driver.remainingTime = `${hours} соат ${minutes} минут ${seconds} секунд`;
                     updateTable();
                 }
             }, 1000);
         }
 
-        // Yozuvni jadvalga qo'shish
-        function addDriver() {
-            const name = document.getElementById('driver-name').value.trim();
-            const plateNumber = document.getElementById('plate-number').value.trim();
-            const busyHours = document.getElementById('busy-hours').value.trim();
-
-            if (!name || !plateNumber || !busyHours) {
-                alert('Iltimos, barcha maydonlarni to\'ldiring!');
-                return;
-            }
-
-            const endTime = new Date().getTime() + parseInt(busyHours) * 3600000; // Soatni millisekundga o'zgartirish
-
-            const driver = {
-                name: name,
-                plateNumber: plateNumber,
-                busyHours: busyHours,
-                status: "БАНД",
-                endTime: endTime,
-                remainingTime: `${busyHours} соат 0 минут 0 секунд`
-            };
-
-            drivers.push(driver);
-            localStorage.setItem("drivers", JSON.stringify(drivers));
-            addDriverToTable(driver);
-            startCountdown(drivers.length - 1);
-        }
-
-        // Jadvalga yozuvni qo'shish
-        function addDriverToTable(driver) {
-            const table = document.getElementById('driver-table').getElementsByTagName('tbody')[0];
-            const row = table.insertRow();
-            row.innerHTML = `
-                <td>${driver.name}</td>
-                <td>${driver.plateNumber}</td>
-                <td class="status ${driver.status === "Мавжуд" ? 'available' : 'busy'}">${driver.status}</td>
-                <td>${driver.remainingTime}</td>
-            `;
-        }
-
-        // Jadvalni yangilash
         function updateTable() {
-            const table = document.getElementById('driver-table').getElementsByTagName('tbody')[0];
-            table.innerHTML = '';
-            drivers.forEach(driver => addDriverToTable(driver));
+            const table = document.querySelector("#driver-table tbody");
+            table.innerHTML = "";
+            drivers.forEach((driver, index) => {
+                addDriverToTable(driver);
+                startCountdown(index);
+            });
         }
 
-        // SBROS QILISH (Barchasini o'chirish)
         function resetAll() {
             localStorage.removeItem("drivers");
             drivers = [];
