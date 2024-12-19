@@ -82,6 +82,11 @@
         </div>
 
         <div class="form-group">
+            <label for="plate-number">Plate Number:</label>
+            <input type="text" id="plate-number" placeholder="Enter plate number">
+        </div>
+
+        <div class="form-group">
             <label for="busy-hours">Busy Hours:</label>
             <input type="number" id="busy-hours" placeholder="Enter hours (e.g., 3)">
         </div>
@@ -92,72 +97,58 @@
             <thead>
                 <tr>
                     <th>Driver Name</th>
+                    <th>Plate Number</th>
+                    <th>Busy Hours</th>
                     <th>Status</th>
-                    <th>Busy Until</th>
                 </tr>
             </thead>
-            <tbody id="drivers-table">
-                <!-- Rows will be added dynamically -->
+            <tbody id="driver-table">
+                <!-- Drivers will be added here -->
             </tbody>
         </table>
     </div>
 
     <script>
-        const drivers = [];
+        const registeredDrivers = new Set();
 
         function addDriver() {
-            const name = document.getElementById('driver-name').value;
-            const hours = parseInt(document.getElementById('busy-hours').value);
+            const driverName = document.getElementById('driver-name').value.trim();
+            const plateNumber = document.getElementById('plate-number').value.trim();
+            const busyHours = document.getElementById('busy-hours').value.trim();
 
-            if (!name || isNaN(hours)) {
-                alert('Please fill out both fields!');
+            if (!driverName || !plateNumber || !busyHours) {
+                alert('Please fill in all fields.');
                 return;
             }
 
-            const busyUntil = new Date();
-            busyUntil.setHours(busyUntil.getHours() + hours);
+            if (registeredDrivers.has(driverName)) {
+                alert('Driver is already registered.');
+                return;
+            }
 
-            drivers.push({
-                name,
-                busyUntil,
-                status: 'busy',
-            });
+            registeredDrivers.add(driverName);
 
-            updateTable();
-        }
+            const table = document.getElementById('driver-table');
+            const row = table.insertRow();
 
-        function updateTable() {
-            const tableBody = document.getElementById('drivers-table');
-            tableBody.innerHTML = '';
+            const nameCell = row.insertCell(0);
+            const plateCell = row.insertCell(1);
+            const hoursCell = row.insertCell(2);
+            const statusCell = row.insertCell(3);
 
-            const now = new Date();
+            nameCell.textContent = driverName;
+            plateCell.textContent = plateNumber;
+            hoursCell.textContent = `${busyHours} hours`;
 
-            drivers.forEach(driver => {
-                const row = document.createElement('tr');
+            const statusButton = document.createElement('button');
+            statusButton.textContent = 'Busy';
+            statusButton.className = 'status-button busy';
+            statusCell.appendChild(statusButton);
 
-                const nameCell = document.createElement('td');
-                nameCell.textContent = driver.name;
-
-                const statusCell = document.createElement('td');
-                const button = document.createElement('button');
-                button.textContent = driver.status === 'busy' ? 'Busy' : 'Available';
-                button.className = `status-button ${driver.status}`;
-                statusCell.appendChild(button);
-
-                const busyUntilCell = document.createElement('td');
-                busyUntilCell.textContent = driver.busyUntil.toLocaleTimeString();
-
-                if (driver.status === 'busy' && now > driver.busyUntil) {
-                    driver.status = 'available';
-                    alert(`Driver ${driver.name} has exceeded their busy time!`);
-                }
-
-                row.appendChild(nameCell);
-                row.appendChild(statusCell);
-                row.appendChild(busyUntilCell);
-
-                tableBody.appendChild(row);
-            });
+            setTimeout(() => {
+                statusButton.textContent = 'Available';
+                statusButton.className = 'status-button available';
+            }, busyHours * 3600 * 1000); // Convert hours to milliseconds
         }
     </script>
 </body>
