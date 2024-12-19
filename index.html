@@ -74,6 +74,13 @@
         .busy {
             background-color: #dc3545;
         }
+        .reset-button {
+            background-color: #dc3545;
+            margin-top: 20px;
+        }
+        .reset-button:hover {
+            background-color: #c82333;
+        }
     </style>
 </head>
 <body>
@@ -98,6 +105,7 @@
         </div>
 
         <button onclick="addDriver()">Қўшиш</button>
+        <button class="reset-button" onclick="resetAll()">SBROS QILISH</button>
 
         <table id="driver-table">
             <thead>
@@ -115,10 +123,16 @@
     </div>
 
     <script>
-        // Ma'lumotlarni yuklash
         let drivers = JSON.parse(localStorage.getItem("drivers")) || [];
 
-        // Orqaga sanashni boshlash
+        window.onload = function () {
+            // Yozuvlarni yuklash
+            drivers.forEach((driver, index) => {
+                addDriverToTable(driver);
+                startCountdown(index);
+            });
+        };
+
         function startCountdown(index) {
             const interval = setInterval(() => {
                 const now = new Date().getTime();
@@ -140,63 +154,57 @@
             }, 1000);
         }
 
-        // Yozuv qo'shish
         function addDriver() {
             const name = document.getElementById("driver-name").value;
             const plate = document.getElementById("plate-number").value;
-            const hours = parseInt(document.getElementById("busy-hours").value);
+            const busyHours = parseInt(document.getElementById("busy-hours").value) * 60 * 60 * 1000; // Convert hours to milliseconds
+            const endTime = new Date().getTime() + busyHours;
 
-            if (!name || !plate || isNaN(hours)) {
-                alert("Илтимос, барча майдонларни тўлдиринг!");
-                return;
-            }
-
-            const endTime = new Date().getTime() + hours * 60 * 60 * 1000;
-
-            const newDriver = {
+            const driver = {
                 name,
                 plate,
-                status: "Банд",
-                endTime,
-                remainingTime: "",
+                status: "БАНД",
+                remainingTime: `${busyHours / (1000 * 60 * 60)} соат`,
+                endTime: endTime
             };
 
-            drivers.push(newDriver);
-            localStorage.setItem("drivers", JSON.stringify(drivers));
+            drivers.push(driver);
+            saveToLocalStorage();
+            addDriverToTable(driver);
             startCountdown(drivers.length - 1);
-            updateTable();
         }
 
-        // Jadvalni yangilash
-        function updateTable() {
-            const tbody = document.getElementById("driver-table").querySelector("tbody");
-            tbody.innerHTML = "";
-            drivers.forEach((driver, index) => {
-                const row = document.createElement("tr");
-                row.innerHTML = `
-                    <td>${driver.name}</td>
-                    <td>${driver.plate}</td>
-                    <td class="${driver.status === "Банд" ? "busy" : "available"}">${driver.status}</td>
-                    <td>${driver.remainingTime}</td>
-                `;
-                tbody.appendChild(row);
+        function addDriverToTable(driver) {
+            const row = document.createElement("tr");
+            row.innerHTML = `
+                <td class="name">${driver.name}</td>
+                <td class="plate">${driver.plate}</td>
+                <td class="status">${driver.status}</td>
+                <td class="remaining-time">${driver.remainingTime}</td>
+            `;
+            tableBody.appendChild(row);
+        }
 
-                if (driver.status === "Банд") {
-                    startCountdown(index);
-                }
-            });
+        function saveToLocalStorage() {
             localStorage.setItem("drivers", JSON.stringify(drivers));
         }
 
-        // Sahifani yuklashda ma'lumotlarni tiklash
-        window.onload = function () {
-            drivers.forEach((driver, index) => {
-                if (driver.status === "Банд") {
-                    startCountdown(index);
-                }
+        function updateTable() {
+            const rows = document.querySelectorAll("#driver-table tbody tr");
+            rows.forEach((row, index) => {
+                const driver = drivers[index];
+                row.querySelector(".status").innerText = driver.status;
+                row.querySelector(".remaining-time").innerText = driver.remainingTime;
             });
-            updateTable();
-        };
+        }
+
+        function resetAll() {
+            if (confirm("Barcha yozuvlarni o'chirmoqchimisiz?")) {
+                localStorage.removeItem("drivers");
+                drivers = [];
+                tableBody.innerHTML = ''; // tableni tozalash
+            }
+        }
     </script>
 </body>
 </html>
