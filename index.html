@@ -94,7 +94,7 @@
 
         <div class="form-group">
             <label for="busy-hours">ВАҚТИ (СОАТ):</label>
-            <input type="number" id="busy-hours" placeholder="ВАҚТ СОАТДА">
+            <input type="number" id="busy-hours" placeholder="САБАБЛИ ВАҚТИ">
         </div>
 
         <button onclick="addDriver()">Қўшиш</button>
@@ -104,99 +104,99 @@
                 <tr>
                     <th>ИСМ ШАРИФИ</th>
                     <th>БОРТ РАҚАМИ</th>
-                    <th>ВАҚТ ҚОЛДИ</th>
-                    <th>ҲОЛАТ</th>
+                    <th>ҲОЛАТИ</th>
+                    <th>ҚОЛГАН ВАҚТ</th>
                 </tr>
             </thead>
-            <tbody></tbody>
+            <tbody>
+                <!-- Yozuvlar shu yerga qo'shiladi -->
+            </tbody>
         </table>
     </div>
 
     <script>
-        const tableBody = document.querySelector("#driver-table tbody");
+        // Ma'lumotlarni yuklash
+        let drivers = JSON.parse(localStorage.getItem("drivers")) || [];
 
-        // Load data from LocalStorage on page load
-        window.onload = function () {
-            const savedData = JSON.parse(localStorage.getItem("drivers")) || [];
-            savedData.forEach((driver) => addDriverToTable(driver));
-        };
-
-        function saveToLocalStorage() {
-            const rows = Array.from(tableBody.children);
-            const data = rows.map((row) => {
-                return {
-                    name: row.querySelector(".name").innerText,
-                    plate: row.querySelector(".plate").innerText,
-                    timeLeft: parseInt(row.dataset.timeLeft),
-                    status: row.querySelector(".status").innerText,
-                };
-            });
-            localStorage.setItem("drivers", JSON.stringify(data));
-        }
-
-        function addDriver() {
-            const name = document.getElementById("driver-name").value;
-            const plate = document.getElementById("plate-number").value;
-            const busyHours = parseInt(document.getElementById("busy-hours").value) * 60 * 60; // Convert hours to seconds
-
-            const driver = {
-                name,
-                plate,
-                timeLeft: busyHours,
-                status: "Busy",
-            };
-            addDriverToTable(driver);
-            saveToLocalStorage();
-        }
-
-        function addDriverToTable(driver) {
-            const row = document.createElement("tr");
-            row.dataset.timeLeft = driver.timeLeft;
-
-            row.innerHTML = `
-                <td class="name">${driver.name}</td>
-                <td class="plate">${driver.plate}</td>
-                <td class="time">${formatTime(driver.timeLeft)}</td>
-                <td class="status ${driver.status === "Busy" ? "busy" : "available"}">${driver.status}</td>
-            `;
-
-            if (driver.status === "Busy") {
-                startCountdown(row);
-            }
-
-            tableBody.appendChild(row);
-        }
-
-        function startCountdown(row) {
-            const timeCell = row.querySelector(".time");
-            const statusCell = row.querySelector(".status");
-
+        // Orqaga sanashni boshlash
+        function startCountdown(index) {
             const interval = setInterval(() => {
-                let timeLeft = parseInt(row.dataset.timeLeft);
+                const now = new Date().getTime();
+                const driver = drivers[index];
+                const remainingTime = driver.endTime - now;
 
-                if (timeLeft <= 0) {
+                if (remainingTime <= 0) {
                     clearInterval(interval);
-                    statusCell.innerText = "Available";
-                    statusCell.classList.remove("busy");
-                    statusCell.classList.add("available");
-                    timeCell.innerText = "-";
+                    driver.status = "Мавжуд";
+                    driver.remainingTime = "0 соат 0 минут 0 секунд";
+                    updateTable();
                 } else {
-                    timeLeft--;
-                    row.dataset.timeLeft = timeLeft;
-                    timeCell.innerText = formatTime(timeLeft);
+                    const hours = Math.floor((remainingTime % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((remainingTime % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((remainingTime % (1000 * 60)) / 1000);
+                    driver.remainingTime = `${hours} соат ${minutes} минут ${seconds} секунд`;
+                    updateTable();
                 }
-
-                saveToLocalStorage(); // Save changes to LocalStorage
             }, 1000);
         }
 
-        function formatTime(seconds) {
-            const hrs = Math.floor(seconds / 3600);
-            const mins = Math.floor((seconds % 3600) / 60);
-            const secs = seconds % 60;
+        // Yozuv qo'shish
+        function addDriver() {
+            const name = document.getElementById("driver-name").value;
+            const plate = document.getElementById("plate-number").value;
+            const hours = parseInt(document.getElementById("busy-hours").value);
 
-            return `${hrs} соат ${mins} минут ${secs} секунд`;
+            if (!name || !plate || isNaN(hours)) {
+                alert("Илтимос, барча майдонларни тўлдиринг!");
+                return;
+            }
+
+            const endTime = new Date().getTime() + hours * 60 * 60 * 1000;
+
+            const newDriver = {
+                name,
+                plate,
+                status: "Банд",
+                endTime,
+                remainingTime: "",
+            };
+
+            drivers.push(newDriver);
+            localStorage.setItem("drivers", JSON.stringify(drivers));
+            startCountdown(drivers.length - 1);
+            updateTable();
         }
+
+        // Jadvalni yangilash
+        function updateTable() {
+            const tbody = document.getElementById("driver-table").querySelector("tbody");
+            tbody.innerHTML = "";
+            drivers.forEach((driver, index) => {
+                const row = document.createElement("tr");
+                row.innerHTML = `
+                    <td>${driver.name}</td>
+                    <td>${driver.plate}</td>
+                    <td class="${driver.status === "Банд" ? "busy" : "available"}">${driver.status}</td>
+                    <td>${driver.remainingTime}</td>
+                `;
+                tbody.appendChild(row);
+
+                if (driver.status === "Банд") {
+                    startCountdown(index);
+                }
+            });
+            localStorage.setItem("drivers", JSON.stringify(drivers));
+        }
+
+        // Sahifani yuklashda ma'lumotlarni tiklash
+        window.onload = function () {
+            drivers.forEach((driver, index) => {
+                if (driver.status === "Банд") {
+                    startCountdown(index);
+                }
+            });
+            updateTable();
+        };
     </script>
 </body>
 </html>
