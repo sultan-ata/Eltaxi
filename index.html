@@ -103,53 +103,68 @@
                 </tr>
             </thead>
             <tbody id="driver-table">
-                <!-- Drivers will be added here -->
             </tbody>
         </table>
     </div>
 
     <script>
-        const registeredDrivers = new Set();
+        const drivers = JSON.parse(localStorage.getItem('drivers')) || [];
+        const table = document.getElementById('driver-table');
+
+        function saveDriversToStorage() {
+            localStorage.setItem('drivers', JSON.stringify(drivers));
+        }
+
+        function renderTable() {
+            table.innerHTML = '';
+            drivers.forEach((driver, index) => {
+                const now = new Date();
+                const busyUntil = new Date(driver.timestamp);
+                busyUntil.setHours(busyUntil.getHours() + parseInt(driver.busyHours));
+
+                const isExpired = now > busyUntil;
+
+                const row = `<tr>
+                    <td>${driver.name}</td>
+                    <td>${driver.plateNumber}</td>
+                    <td>${driver.busyHours}</td>
+                    <td>
+                        <button class="status-button ${isExpired ? 'available' : 'busy'}">
+                            ${isExpired ? 'Available' : 'Busy'}
+                        </button>
+                    </td>
+                </tr>`;
+                table.innerHTML += row;
+            });
+        }
 
         function addDriver() {
-            const driverName = document.getElementById('driver-name').value.trim();
+            const name = document.getElementById('driver-name').value.trim();
             const plateNumber = document.getElementById('plate-number').value.trim();
             const busyHours = document.getElementById('busy-hours').value.trim();
 
-            if (!driverName || !plateNumber || !busyHours) {
+            if (!name || !plateNumber || !busyHours) {
                 alert('Please fill in all fields.');
                 return;
             }
 
-            if (registeredDrivers.has(driverName)) {
-                alert('Driver is already registered.');
+            if (drivers.find(driver => driver.name === name)) {
+                alert('This driver is already registered.');
                 return;
             }
 
-            registeredDrivers.add(driverName);
+            const timestamp = new Date().toISOString();
 
-            const table = document.getElementById('driver-table');
-            const row = table.insertRow();
+            drivers.push({ name, plateNumber, busyHours, timestamp });
+            saveDriversToStorage();
+            renderTable();
 
-            const nameCell = row.insertCell(0);
-            const plateCell = row.insertCell(1);
-            const hoursCell = row.insertCell(2);
-            const statusCell = row.insertCell(3);
-
-            nameCell.textContent = driverName;
-            plateCell.textContent = plateNumber;
-            hoursCell.textContent = `${busyHours} hours`;
-
-            const statusButton = document.createElement('button');
-            statusButton.textContent = 'Busy';
-            statusButton.className = 'status-button busy';
-            statusCell.appendChild(statusButton);
-
-            setTimeout(() => {
-                statusButton.textContent = 'Available';
-                statusButton.className = 'status-button available';
-            }, busyHours * 3600 * 1000); // Convert hours to milliseconds
+            document.getElementById('driver-name').value = '';
+            document.getElementById('plate-number').value = '';
+            document.getElementById('busy-hours').value = '';
         }
+
+        window.onload = renderTable;
     </script>
 </body>
 </html>
