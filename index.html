@@ -99,67 +99,110 @@
 
         <button onclick="addDriver()">ҚЎШИШ</button>
 
-        <table>
+        <table id="driver-table">
             <thead>
                 <tr>
                     <th>ИСМ ШАРИФИ</th>
                     <th>БОРТ РАҚАМИ</th>
-                    <th>ВАҚТИ</th>
-                    <th>СТАТУС</th>
+                    <th>ҲОЛАТ</th>
+                    <th>ҚОЛГАН ВАҚТ</th>
                 </tr>
             </thead>
-            <tbody id="driver-table">
-                <!-- Dynamic rows will be added here -->
+            <tbody>
             </tbody>
         </table>
     </div>
 
     <script>
-        function addDriver() {
-            const driverName = document.getElementById('driver-name').value;
-            const plateNumber = document.getElementById('plate-number').value;
-            const busyHours = document.getElementById('busy-hours').value;
+        const tableBody = document.querySelector("#driver-table tbody");
 
-            if (!driverName || !plateNumber || !busyHours) {
-                alert('Илтимос, барча маълумотларни тўлдиринг!');
+        function loadDrivers() {
+            const savedDrivers = JSON.parse(localStorage.getItem("drivers")) || [];
+            savedDrivers.forEach(driver => addDriverToTable(driver));
+        }
+
+        function saveDrivers() {
+            const drivers = [];
+            tableBody.querySelectorAll("tr").forEach(row => {
+                const cells = row.querySelectorAll("td");
+                drivers.push({
+                    name: cells[0].textContent,
+                    plate: cells[1].textContent,
+                    status: cells[2].textContent,
+                    remainingTime: cells[3].textContent
+                });
+            });
+            localStorage.setItem("drivers", JSON.stringify(drivers));
+        }
+
+        function addDriverToTable({ name, plate, remainingTime }) {
+            const row = document.createElement("tr");
+
+            const nameCell = document.createElement("td");
+            nameCell.textContent = name;
+
+            const plateCell = document.createElement("td");
+            plateCell.textContent = plate;
+
+            const statusCell = document.createElement("td");
+            statusCell.className = "status busy";
+            statusCell.textContent = "Банд";
+
+            const timeCell = document.createElement("td");
+            timeCell.textContent = remainingTime;
+
+            row.appendChild(nameCell);
+            row.appendChild(plateCell);
+            row.appendChild(statusCell);
+            row.appendChild(timeCell);
+            tableBody.appendChild(row);
+
+            startCountdown(row, parseInt(remainingTime) * 3600);
+        }
+
+        function addDriver() {
+            const name = document.getElementById("driver-name").value;
+            const plate = document.getElementById("plate-number").value;
+            const busyHours = parseInt(document.getElementById("busy-hours").value) || 0;
+
+            if (!name || !plate || busyHours <= 0) {
+                alert("Барча майдонларни тўлдиринг!");
                 return;
             }
 
-            const table = document.getElementById('driver-table');
-            const row = table.insertRow();
-            const timeCell = row.insertCell(0);
-            const plateCell = row.insertCell(1);
-            const countdownCell = row.insertCell(2);
-            const statusCell = row.insertCell(3);
+            addDriverToTable({ name, plate, remainingTime: busyHours });
+            saveDrivers();
 
-            timeCell.textContent = driverName;
-            plateCell.textContent = plateNumber;
-            const totalMinutes = busyHours * 60; // Convert hours to minutes
-            countdownCell.textContent = `${busyHours}:00`;
-            statusCell.innerHTML = `<span class="status busy">БАНД</span>`;
+            document.getElementById("driver-name").value = "";
+            document.getElementById("plate-number").value = "";
+            document.getElementById("busy-hours").value = "";
+        }
 
-            let remainingTime = totalMinutes * 60; // Convert minutes to seconds
+        function startCountdown(row, totalTime) {
+            const timeCell = row.querySelector("td:nth-child(4)");
+            const statusCell = row.querySelector("td:nth-child(3)");
+            let remainingTime = totalTime;
 
-            const countdown = setInterval(() => {
+            const interval = setInterval(() => {
+                remainingTime--;
+
                 const hours = Math.floor(remainingTime / 3600);
                 const minutes = Math.floor((remainingTime % 3600) / 60);
                 const seconds = remainingTime % 60;
 
-                countdownCell.textContent = `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                timeCell.textContent = `${hours} соат ${minutes} дақиқа ${seconds} секунд`;
 
                 if (remainingTime <= 0) {
-                    clearInterval(countdown);
-                    countdownCell.textContent = "00:00:00";
-                    statusCell.innerHTML = `<span class="status available">БОШ</span>`;
+                    clearInterval(interval);
+                    statusCell.textContent = "Available";
+                    statusCell.className = "status available";
+                    timeCell.textContent = "0";
+                    saveDrivers();
                 }
-
-                remainingTime--;
             }, 1000);
-
-            document.getElementById('driver-name').value = '';
-            document.getElementById('plate-number').value = '';
-            document.getElementById('busy-hours').value = '';
         }
+
+        window.onload = loadDrivers;
     </script>
 </body>
 </html>
